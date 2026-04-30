@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bitcoin Time Trader</title>
+<style>
+body{
+  font-family:Arial;
+  background:#111;
+  color:#eee;
+  margin:0;
+  text-align:center;
+}
+
+#start{
+  padding:40px 20px;
+}
+
+.panel{
+  width:95%;
+  max-width:520px;
+  margin:10px auto;
+  background:#1a1a1a;
+  padding:12px;
+  border-radius:12px;
+}
+
+.row{margin:6px 0;font-size:14px;}
+
+button{
+  padding:8px;
+  margin:3px;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.green{color:#4caf50;}
+.red{color:#f44336;}
+
+.small{font-size:12px; opacity:0.7;}
+
+#game{display:none;}
+
+textarea, input{
+  padding:8px;
+  width:80%;
+  margin:5px;
+}
+</style>
+</head>
+<body>
+
+<div id="start">
+
+  <h2>Bitcoin Time Trader</h2>
+
+  <div class="panel">
+    <p class="small">
+      Welcome to <b>Bitcoin Trade Simulator</b><br><br>
+      You always wonder how it would be to participate in Bitcoin's early days?<br>
+      Now you may try it.<br><br>
+      Do not forget to donate to creator for more.
+    </p>
+
+    <p class="small">
+      BTC: <br>
+      <b>3F3A7Wroq1ZSoGEyTXmDtCwPpdrCBt91gy</b><br><br>
+      ETH & EVMs:<br>
+      <b>0xB7140B269F26596BeB55b78d945cDC34A71FC12E</b>
+    </p>
+  </div>
+
+  <input id="nameInput" placeholder="Your name">
+  <br>
+  <button onclick="startGame()">START</button>
+
+</div>
+
+<div id="game">
+
+<div class="panel">
+
+  <div class="row">
+    📅 <span id="date"></span> | ⚡ x<span id="speed"></span>
+  </div>
+
+  <div class="row">
+    💰 $<span id="balance"></span> | 🪙 <span id="btc"></span> BTC
+  </div>
+
+  <div class="row" id="value"></div>
+
+  <div class="row">
+    Price: $<span id="price"></span>
+  </div>
+
+</div>
+
+<div class="panel">
+
+  <b>Speed</b><br>
+  <button onclick="setSpeed(1)">x1</button>
+  <button onclick="setSpeed(2)">x2</button>
+  <button onclick="setSpeed(5)">x5</button>
+  <button onclick="setSpeed(10)">x10</button>
+
+</div>
+
+<div class="panel">
+
+  <b>BUY</b><br>
+  <button onclick="buy(0.25)">25%</button>
+  <button onclick="buy(0.5)">50%</button>
+  <button onclick="buy(1)">100%</button>
+
+  <br><br>
+
+  <b>SELL</b><br>
+  <button onclick="sell(0.25)">25%</button>
+  <button onclick="sell(0.5)">50%</button>
+  <button onclick="sell(1)">100%</button>
+
+</div>
+
+<div class="panel">
+  <b>Feed</b>
+  <div id="feed"></div>
+</div>
+
+<div class="panel">
+  <b>Leaderboard</b>
+  <div id="board"></div>
+
+  <br>
+
+  <div class="small">
+    <b>Donation Addresses</b><br><br>
+    BTC:<br>
+    3F3A7Wroq1ZSoGEyTXmDtCwPpdrCBt91gy<br><br>
+    ETH & EVMs:<br>
+    0xB7140B269F26596BeB55b78d945cDC34A71FC12E
+  </div>
+
+</div>
+
+</div>
+
+<script>
+
+let name="";
+let balance=0;
+let btc=0;
+let avgPrice=0;
+
+let day=0;
+let speed=1;
+
+let interval=null;
+
+let startDate=new Date("2010-01-01");
+
+const data=[
+{d:0,p:0.05},
+{d:300,p:2},
+{d:700,p:0.5},
+{d:1200,p:20},
+{d:1600,p:5},
+{d:2000,p:150},
+{d:2400,p:80},
+{d:2800,p:500},
+{d:3200,p:1200},
+{d:3600,p:9000},
+{d:4000,p:30000},
+{d:4500,p:15000},
+{d:5000,p:60000},
+{d:5500,p:25000},
+{d:6000,p:70000},
+{d:6300,p:50000}
+];
+
+function priceAt(d){
+for(let i=0;i<data.length-1;i++){
+let a=data[i],b=data[i+1];
+
+if(d>=a.d&&d<=b.d){
+let t=(d-a.d)/(b.d-a.d);
+let base=a.p+(b.p-a.p)*t;
+
+let noise=(Math.random()-0.5)*base*0.08;
+
+return Math.max(0.01,base+noise);
+}
+}
+return data[data.length-1].p;
+}
+
+function dateText(day){
+let d=new Date(startDate);
+d.setDate(d.getDate()+Math.floor(day));
+return d.toDateString()+" (Day "+Math.floor(day)+")";
+}
+
+function startGame(){
+name=document.getElementById("nameInput").value||"Player";
+document.getElementById("start").style.display="none";
+document.getElementById("game").style.display="block";
+loadBoard();
+loop();
+}
+
+function loop(){
+clearInterval(interval);
+interval=setInterval(gameTick,1000);
+}
+
+function gameTick(){
+
+day+=speed;
+balance+=speed;
+
+let price=priceAt(day);
+
+let value=btc*price;
+let cost=btc*avgPrice;
+let profit=value-cost;
+
+document.getElementById("date").innerText=dateText(day);
+document.getElementById("speed").innerText=speed;
+
+document.getElementById("balance").innerText=balance.toFixed(2);
+document.getElementById("btc").innerText=btc.toFixed(6);
+document.getElementById("price").innerText=price.toFixed(2);
+
+document.getElementById("value").innerHTML=
+`Value: $${value.toFixed(2)} <span class="${profit>=0?'green':'red'}">
+(${profit>=0?'+':''}$${profit.toFixed(2)})</span>`;
+
+if(day>=6300){
+endGame(price);
+}
+}
+
+function buy(p){
+let price=priceAt(day);
+let spend=balance*p;
+if(spend<=0)return;
+
+let bought=spend/price;
+
+avgPrice=((avgPrice*btc)+spend)/(btc+bought);
+
+btc+=bought;
+balance-=spend;
+
+log(`BUY ${p*100}% | $${spend.toFixed(2)} → ${bought.toFixed(6)} BTC @ $${price.toFixed(2)}`);
+}
+
+function sell(p){
+let price=priceAt(day);
+let amount=btc*p;
+if(amount<=0)return;
+
+let gain=amount*price;
+let profit=(price-avgPrice)*amount;
+
+btc-=amount;
+balance+=gain;
+
+log(`SELL ${p*100}% | ${amount.toFixed(6)} BTC → $${gain.toFixed(2)} @ $${price.toFixed(2)} (${profit>=0?'+':''}${profit.toFixed(2)})`,
+profit>=0);
+}
+
+function setSpeed(s){
+speed=s;
+}
+
+function log(t,good=true){
+let el=document.createElement("div");
+el.className=good?"green":"red";
+el.innerText=t;
+
+let f=document.getElementById("feed");
+f.prepend(el);
+
+if(f.children.length>20)f.removeChild(f.lastChild);
+}
+
+function endGame(price){
+
+clearInterval(interval);
+
+let final=balance+btc*price;
+
+save(final);
+
+alert("GAME OVER\n$"+final.toFixed(2));
+
+resetGame();
+}
+
+function resetGame(){
+
+balance=0;
+btc=0;
+avgPrice=0;
+day=0;
+speed=1;
+
+document.getElementById("feed").innerHTML="";
+
+loadBoard();
+
+document.getElementById("game").style.display="none";
+document.getElementById("start").style.display="block";
+document.getElementById("nameInput").value="";
+}
+
+function save(score){
+let arr=JSON.parse(localStorage.getItem("lb"))||[];
+arr.push({name,score});
+arr.sort((a,b)=>b.score-a.score);
+arr=arr.slice(0,10);
+localStorage.setItem("lb",JSON.stringify(arr));
+loadBoard();
+}
+
+function loadBoard(){
+let arr=JSON.parse(localStorage.getItem("lb"))||[];
+let b=document.getElementById("board");
+b.innerHTML="";
+arr.forEach(x=>{
+let d=document.createElement("div");
+d.innerText=x.name+" - $"+x.score.toFixed(2);
+b.appendChild(d);
+});
+}
+
+</script>
+
+</body>
+</html>
